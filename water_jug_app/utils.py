@@ -1,80 +1,48 @@
 from collections import deque
 
 def gcd(a, b):
-    while b != 0:
+    while b:
         a, b = b, a % b
     return a
 
-def water_jug_solver(jug1_capacity, jug2_capacity, target):
-    if target % gcd(jug1_capacity, jug2_capacity) != 0:
+def water_jug_solver(x, y, z):
+    if z > max(x, y) or z % gcd(x, y) != 0:
         return {"solution": "No solution possible"}
 
-    visited = set()
-    queue = deque([(0, 0)])
-    steps = []
+    # Breadth-First Search
+    queue = deque([(0, 0)])  # starting state (0, 0)
+    visited = set([(0, 0)])
+    parent_map = {}
+    solution = []
+    max_depth = 10000  # Limiting depth to prevent memory overflow
 
     while queue:
-        jug1, jug2 = queue.popleft()
+        cur_x, cur_y = queue.popleft()
+        if cur_x == z or cur_y == z:
+            # backtrack to find the solution path
+            while (cur_x, cur_y) in parent_map:
+                action, (prev_x, prev_y) = parent_map[(cur_x, cur_y)]
+                solution.append({"bucketX": cur_x, "bucketY": cur_y, "action": action})
+                cur_x, cur_y = prev_x, prev_y
+            solution.append({"bucketX": 0, "bucketY": 0, "action": "Start"})
+            solution.reverse()
+            solution[-1]["status"] = "Solved"
+            return {"solution": solution}
 
-        if (jug1, jug2) in visited:
-            continue
+        # Possible actions
+        states = [
+            (x, cur_y, "Fill bucket X"),
+            (cur_x, y, "Fill bucket Y"),
+            (0, cur_y, "Empty bucket X"),
+            (cur_x, 0, "Empty bucket Y"),
+            (cur_x - min(cur_x, y - cur_y), cur_y + min(cur_x, y - cur_y), "Transfer from bucket X to Y"),
+            (cur_x + min(cur_y, x - cur_x), cur_y - min(cur_y, x - cur_x), "Transfer from bucket Y to X")
+        ]
 
-        visited.add((jug1, jug2))
-        steps.append((jug1, jug2))
-
-        if jug1 == target or jug2 == target or jug1 + jug2 == target:
-            return format_solution(steps)
-
-        # Fill jug1
-        queue.append((jug1_capacity, jug2))
-
-        # Fill jug2
-        queue.append((jug1, jug2_capacity))
-
-        # Empty jug1
-        queue.append((0, jug2))
-
-        # Empty jug2
-        queue.append((jug1, 0))
-
-        # Transfer jug1 -> jug2
-        transfer = min(jug1, jug2_capacity - jug2)
-        queue.append((jug1 - transfer, jug2 + transfer))
-
-        # Transfer jug2 -> jug1
-        transfer = min(jug2, jug1_capacity - jug1)
-        queue.append((jug1 + transfer, jug2 - transfer))
+        for next_x, next_y, action in states:
+            if (next_x, next_y) not in visited and len(visited) < max_depth:
+                queue.append((next_x, next_y))
+                visited.add((next_x, next_y))
+                parent_map[(next_x, next_y)] = (action, (cur_x, cur_y))
 
     return {"solution": "No solution possible"}
-
-def format_solution(steps):
-    result = []
-    for i, (jug1, jug2) in enumerate(steps, 1):
-        action = determine_action(steps, i)
-        result.append({
-            "step": i,
-            "bucketX": jug1,
-            "bucketY": jug2,
-            "action": action
-        })
-    result[-1]["status"] = "Solved"
-    return {"solution": result}
-
-def determine_action(steps, i):
-    if i == 1:
-        return "Initial state"
-    jug1_prev, jug2_prev = steps[i-2]
-    jug1_curr, jug2_curr = steps[i-1]
-
-    if jug1_curr > jug1_prev:
-        return "Fill bucket X"
-    elif jug2_curr > jug2_prev:
-        return "Fill bucket Y"
-    elif jug1_curr < jug1_prev:
-        return "Empty bucket X"
-    elif jug2_curr < jug2_prev:
-        return "Empty bucket Y"
-    elif jug1_curr == jug1_prev:
-        return "Transfer from bucket Y to X"
-    else:
-        return "Transfer from bucket X to Y"

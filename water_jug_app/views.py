@@ -5,12 +5,14 @@ from .utils import water_jug_solver
 
 class WaterJugView(APIView):
     def post(self, request):
-        x_capacity = request.data.get('x_capacity')
-        y_capacity = request.data.get('y_capacity')
-        z_amount_wanted = request.data.get('z_amount_wanted')
+        try:
+            x_capacity = int(request.data.get('x_capacity'))
+            y_capacity = int(request.data.get('y_capacity'))
+            z_amount_wanted = int(request.data.get('z_amount_wanted'))
+        except (TypeError, ValueError):
+            return Response({"error": "All inputs must be positive integers"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate inputs
-        if not all(isinstance(i, int) and i > 0 for i in [x_capacity, y_capacity, z_amount_wanted]):
+        if x_capacity <= 0 or y_capacity <= 0 or z_amount_wanted <= 0:
             return Response({"error": "All inputs must be positive integers"}, status=status.HTTP_400_BAD_REQUEST)
 
         solution = water_jug_solver(x_capacity, y_capacity, z_amount_wanted)
